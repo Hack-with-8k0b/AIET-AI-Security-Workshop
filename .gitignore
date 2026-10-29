@@ -1,16 +1,30 @@
 # Secrets / local NVIDIA config (do not commit API keys)
 .env
 .env.*
+.envrc
 !.env.example
 .env.config.py
 
 # Python
 __pycache__/
-*.py[cod]
+*.py[codz]
+*$py.class
 *.egg-info/
+.installed.cfg
+*.egg
 .venv/
 venv/
 venv-*/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
 
 # Node
 node_modules/
@@ -27,5 +41,6 @@ Thumbs.db
 *.log
 *.pid
 *.sqlite3
+db.sqlite3
 aigoat.db
 chroma_db/
