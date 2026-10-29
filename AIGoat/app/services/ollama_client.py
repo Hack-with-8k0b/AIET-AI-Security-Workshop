@@ -271,17 +271,37 @@ class OllamaClient:
             return ChatTurn(content="", tool_calls=[])
 
 
-def get_ollama_client() -> OllamaClient:
+def get_ollama_client() -> Any:
+    """Return the configured backend while preserving legacy call sites.
+
+    LLM_PROVIDER defaults to Ollama for backwards compatibility. The workshop
+    Docker deployment sets it to "nvidia" so no local model is downloaded.
+    """
     if _client_override is not None:
         return _client_override
     global _ollama_client
     if _ollama_client is None:
-        settings = get_settings()
-        _ollama_client = OllamaClient(
-            base_url=settings.ollama.base_url,
-            model=settings.ollama.model,
-            timeout=settings.ollama.timeout,
-        )
+        provider = os.environ.get("LLM_PROVIDER", "ollama").strip().lower()
+        if provider in {"nvidia", "openai-compatible", "openai_compatible"}:
+            from app.services.openai_compatible_client import OpenAICompatibleClient
+
+            _ollama_client = OpenAICompatibleClient(
+                base_url=os.environ.get(
+                    "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
+                ),
+                api_key=os.environ.get("NVIDIA_API_KEY", ""),
+                model=os.environ.get(
+                    "NVIDIA_MODEL", "nvidia/nemotron-3-ultra-550b-a55b"
+                ),
+                timeout=int(os.environ.get("LLM_TIMEOUT", "120")),
+            )
+        else:
+            settings = get_settings()
+            _ollama_client = OllamaClient(
+                base_url=settings.ollama.base_url,
+                model=settings.ollama.model,
+                timeout=settings.ollama.timeout,
+            )
     return _ollama_client
 
 
