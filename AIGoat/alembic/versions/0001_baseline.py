@@ -8,7 +8,7 @@ This revision matches the schema from before Alembic. An existing database
 that already has these tables, and has no ``alembic_version`` table, must be
 marked with ``alembic stamp 0001``. ``alembic upgrade head`` then applies the
 later revisions. Stamping ``head`` would skip them. ``scripts/start.sh`` and
-``docker/docker-entrypoint.sh`` stamp 0001 when they see a ``users`` table
+``docker/entrypoint.py`` stamp 0001 when they see a ``users`` table
 and no ``alembic_version`` table.
 """
 from typing import Sequence, Union

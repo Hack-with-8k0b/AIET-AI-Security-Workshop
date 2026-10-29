@@ -1,45 +1,54 @@
 # AIET AI Security Workshop
 
-Browser-based AI security training using [AIGoat](./AIGoat/README.md): prompt injection, sensitive-data leakage, RAG poisoning, agent/tool misuse, and MCP security.
+Browser-based AI security labs built on [AIGoat](./AIGoat/README.md): prompt injection, data leakage, RAG poisoning, agent/tool misuse, and MCP security.
 
-## Quick instructor setup (NVIDIA hosted model)
+## What this deployment uses
 
-The workshop Docker configuration is being adapted to use NVIDIA's OpenAI-compatible API with `nvidia/nemotron-3-ultra-550b-a55b`. It is intended to avoid local Ollama model downloads and keep the API key on the backend.
+| Piece | Implementation |
+|---|---|
+| Chat LLM | NVIDIA NIM API (`nvidia/nemotron-3-ultra-550b-a55b`) |
+| RAG embeddings | NVIDIA NIM API (`nvidia/nv-embedqa-e5-v5`) |
+| Vector store | Local ChromaDB volume (no local Torch/CUDA) |
+| Backend image | Multi-stage **distroless** Python (`entrypoint.py`) |
+| Frontend | Nginx serving the React UI on port **3000** |
 
-### Configure
+No Ollama container and no multi-GB local model download.
 
-PowerShell from the repository root:
+## Quick start
 
 ```powershell
 cd AIGoat\docker
 Copy-Item .env.example .env
-notepad .env
+# Edit .env: set NVIDIA_API_KEY and APP_SECRET_KEY
+docker compose up --build -d
 ```
 
-Set `NVIDIA_API_KEY` and `APP_SECRET_KEY`. Generate a secret with:
+Open **http://127.0.0.1:3000**.
+
+Generate a secret:
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Never commit or share `docker/.env`.
+Never commit `AIGoat/docker/.env`.
 
-### Run local smoke test
-
-Keep `HOST_BIND=127.0.0.1` in `.env` for initial testing:
+## Useful commands
 
 ```powershell
-docker compose up --build -d
+cd AIGoat\docker
 docker compose ps
 docker compose logs --tail 100 backend
+docker compose down
 ```
 
-Open http://127.0.0.1:3000. Test login, chat, one RAG lab, one agent lab, and one MCP lab before using it in class.
+## Network notes
 
-### Classroom network
+- Default `HOST_BIND=0.0.0.0` so VM port-forwards / LAN access can reach the UI.
+- For loopback-only smoke tests, set `HOST_BIND=127.0.0.1`.
+- Do not expose this workshop stack to the public internet.
 
-Only after testing, set `HOST_BIND` to the instructor PC's actual LAN IP and allow inbound TCP/3000 only from the student subnet using Windows Firewall. Do not use `0.0.0.0`, public port forwarding, or internet exposure. The backend is intended to remain private inside Docker.
+## Docs
 
-Use synthetic data only. NVIDIA API quotas/rate limits can change; a successful single request does not guarantee 60 concurrent students. Pilot with 5–10 students and stagger exercises if rate limits or timeouts occur.
-
-See [the AIGoat workshop guide](./AIGoat/docs/workshop-guide.md).
+- [AIGoat README](./AIGoat/README.md)
+- [Workshop guide](./AIGoat/docs/workshop-guide.md)

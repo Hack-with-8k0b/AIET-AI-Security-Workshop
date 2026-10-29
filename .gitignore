@@ -5,6 +5,9 @@
 !.env.example
 .env.config.py
 
+# Local one-off deploy/debug helpers
+AIGoat/docker/_*.py
+
 # Python
 __pycache__/
 *.py[codz]
