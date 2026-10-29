@@ -1,0 +1,31 @@
+# Secrets / local NVIDIA config (do not commit API keys)
+.env
+.env.*
+!.env.example
+.env.config.py
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+venv-*/
+
+# Node
+node_modules/
+npm-debug.log*
+build/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Runtime / local DBs
+*.log
+*.pid
+*.sqlite3
+aigoat.db
+chroma_db/

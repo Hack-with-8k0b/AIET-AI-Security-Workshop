@@ -1,0 +1,15 @@
+# ─────────────────────────────────────────────────────────────────────
+# AI Goat — Attack Lab Definitions (fallback)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Lab content now lives in config/labs/*.yml (currently llm.yml).
+# This file is kept so the loader's fallback path stays exercised.
+# When config/labs/ contains YAML files, those entries win on id collision.
+#
+# To add a lab: edit config/labs/<domain>.yml, then restart the backend.
+# Do not rename existing ids — they appear in LabSession rows and in
+# AttacksPage.jsx backendLabId values.
+#
+# ─────────────────────────────────────────────────────────────────────
+
+labs: []

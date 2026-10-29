@@ -1,0 +1,73 @@
+# AI Goat - Git Ignore
+
+# Python
+venv/
+venv-*/
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.egg
+
+# Database
+aigoat.db
+aigoat.db-journal
+*.sqlite3
+*.sqlite3-journal
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# ChromaDB
+chroma_db/
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+build/
+
+# Logs and runtime
+*.log
+*.pid
+*.port
+logs/
+.pids/
+
+# System files
+.DS_Store
+Thumbs.db
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Secrets
+secrets.json
+credentials.json
+*.key
+*.pem
+
+# Docker overrides
+docker-compose.override.yml
+
+#Solution Files
+docs/challenges-walkthrough.md
+
+# Develpoment Files
+AGENTS.md
+CLAUDE.md
+agent-docs
+agent-docs/*
+.cursor
+.cursor/*
+
+# Promo files
+media/promo
+media/promo/*
+
+# Support attachments (generated names, not public)
+support_uploads/
