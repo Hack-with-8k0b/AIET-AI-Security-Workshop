@@ -1,79 +1,36 @@
-# ─────────────────────────────────────────────────────────────
-# Docker Desktop must have at least 12 GB RAM allocated.
-# Mistral 7B needs ~4.5 GB, plus ~3 GB for the backend.
-#   Docker Desktop → Settings → Resources → Memory → 12 GB+
-#
-# To use a smaller model, change ollama.model in docker/config.yml
-# (e.g. "tinyllama") -- the backend pulls the model automatically
-# on first startup if it is not already present.
-#
-# VOLUMES
-#   ollama_models  – external volume; survives "docker-compose down -v"
-#                    so the ~4.5 GB model is only downloaded once.
-#                    Create it before first run:
-#                      docker volume create ollama_models
-#                    To truly delete:  docker volume rm ollama_models
-#
-#   db_data        – app database; cleared by "docker-compose down -v"
-#                    for a fresh start (re-seeds on next startup).
-#
-# BINDING
-#   Published ports use host 0.0.0.0, so the stack is reachable on the
-#   machine's VLAN address (http://<vlan-ip>:3000), not only localhost.
-#   In-container healthchecks still call localhost: that check runs
-#   inside the backend container, where uvicorn is listening on 0.0.0.0.
-# ─────────────────────────────────────────────────────────────
-
+# Workshop deployment: hosted NVIDIA inference, no Ollama container/model download.
+# Default is loopback-only. For a controlled classroom LAN, set HOST_BIND in docker/.env
+# to the instructor machine's LAN IP and firewall TCP/3000 to the student subnet only.
 name: aigoat
 
 services:
-  ollama:
-    image: ollama/ollama
-    ports:
-      - host_ip: 0.0.0.0
-        published: 11434
-        target: 11434
-        protocol: tcp
-    volumes:
-      - ollama_models:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_NUM_PARALLEL=1
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
-
   backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    ports:
-      - host_ip: 0.0.0.0
-        published: 8000
-        target: 8000
-        protocol: tcp
+    expose:
+      - "8000"
     volumes:
-      - ./config.yml:/app/config/config.yml
-      - ../prompts:/app/prompts
-      - ../media:/app/media
-      - ../guardrails:/app/guardrails
+      - ./config.yml:/app/config/config.yml:ro
+      - ../prompts:/app/prompts:ro
+      - ../media:/app/media:ro
+      - ../guardrails:/app/guardrails:ro
       - db_data:/app/data
     environment:
-      - CONFIG_PATH=/app/config/config.yml
-      - OLLAMA_BASE_URL=http://ollama:11434
-    depends_on:
-      ollama:
-        condition: service_healthy
+      CONFIG_PATH: /app/config/config.yml
+      LLM_PROVIDER: ${LLM_PROVIDER:-nvidia}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:?Set NVIDIA_API_KEY in docker/.env}
+      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      NVIDIA_MODEL: ${NVIDIA_MODEL:-nvidia/nemotron-3-ultra-550b-a55b}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?Set a unique APP_SECRET_KEY in docker/.env}
+      APP_DEBUG: "false"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/products/', timeout=5).raise_for_status()"]
       interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 45s
+      start_period: 60s
     restart: unless-stopped
 
   frontend:
@@ -81,9 +38,9 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     ports:
-      - host_ip: 0.0.0.0
+      - target: 3000
         published: 3000
-        target: 3000
+        host_ip: ${HOST_BIND:-127.0.0.1}
         protocol: tcp
     depends_on:
       backend:
@@ -92,5 +49,3 @@ services:
 
 volumes:
   db_data:
-  ollama_models:
-    external: true

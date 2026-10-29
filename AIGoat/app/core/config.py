@@ -168,6 +168,12 @@ def load_config(path: str | Path | None = None) -> Settings:
     ollama_url = os.environ.get("OLLAMA_BASE_URL")
     if ollama_url:
         settings.ollama.base_url = ollama_url
+    secret_key = os.environ.get("APP_SECRET_KEY")
+    if secret_key:
+        settings.app.secret_key = secret_key
+    debug = os.environ.get("APP_DEBUG")
+    if debug is not None:
+        settings.app.debug = debug.strip().lower() in {"1", "true", "yes", "on"}
     return settings
 
 
