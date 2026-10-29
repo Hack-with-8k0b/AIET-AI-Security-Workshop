@@ -1,0 +1,17 @@
+.git
+.github
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+frontend/node_modules
+frontend/build
+tests
+docs
+colab_notebooks
+*.md
+!README.md
+.venv
+venv
+.env
+docker/.env
+**/.DS_Store

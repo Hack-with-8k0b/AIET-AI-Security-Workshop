@@ -1,6 +1,6 @@
-# Workshop deployment: hosted NVIDIA inference, no Ollama container/model download.
-# Default is loopback-only. For a controlled classroom LAN, set HOST_BIND in docker/.env
-# to the instructor machine's LAN IP and firewall TCP/3000 to the student subnet only.
+# AIET workshop: distroless backend + nginx frontend, NVIDIA hosted models.
+# From this directory: docker compose up --build -d
+# App: http://HOST:3000
 name: aigoat
 
 services:
@@ -12,25 +12,27 @@ services:
       - "8000"
     volumes:
       - ./config.yml:/app/config/config.yml:ro
-      - ../prompts:/app/prompts:ro
-      - ../media:/app/media:ro
-      - ../guardrails:/app/guardrails:ro
       - db_data:/app/data
+    env_file:
+      - .env
     environment:
       CONFIG_PATH: /app/config/config.yml
       LLM_PROVIDER: ${LLM_PROVIDER:-nvidia}
-      NVIDIA_API_KEY: ${NVIDIA_API_KEY:?Set NVIDIA_API_KEY in docker/.env}
-      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
-      NVIDIA_MODEL: ${NVIDIA_MODEL:-nvidia/nemotron-3-ultra-550b-a55b}
-      LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
-      APP_SECRET_KEY: ${APP_SECRET_KEY:?Set a unique APP_SECRET_KEY in docker/.env}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-nvidia}
+      NVIDIA_EMBED_MODEL: ${NVIDIA_EMBED_MODEL:-nvidia/nv-embedqa-e5-v5}
       APP_DEBUG: "false"
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/products/', timeout=5).raise_for_status()"]
+      test:
+        [
+          "CMD",
+          "/usr/bin/python3.11",
+          "-c",
+          "import httpx; httpx.get('http://localhost:8000/api/products/', timeout=5).raise_for_status()",
+        ]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 8
+      start_period: 90s
     restart: unless-stopped
 
   frontend:
@@ -38,10 +40,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     ports:
-      - target: 3000
-        published: 3000
-        host_ip: ${HOST_BIND:-127.0.0.1}
-        protocol: tcp
+      - "${HOST_BIND:-0.0.0.0}:3000:3000"
     depends_on:
       backend:
         condition: service_healthy

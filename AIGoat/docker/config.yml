@@ -24,7 +24,8 @@ defense:
 
 rag:
   enabled: true
-  embedding_model: "all-MiniLM-L6-v2"
+  # Hosted NVIDIA embeddings when LLM_PROVIDER=nvidia (see NvidiaEmbeddingService).
+  embedding_model: "nvidia/nv-embedqa-e5-v5"
   chroma_path: "/app/data/chroma_db"
   top_k: 5
   chunk_size: 512

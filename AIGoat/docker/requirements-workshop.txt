@@ -1,0 +1,36 @@
+# Slim AIET workshop backend deps: NVIDIA hosted chat + embeddings.
+# Intentionally omits sentence-transformers / torch / nemoguardrails (multi-GB).
+
+# Core Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy[asyncio]>=2.0.25
+aiosqlite>=0.19.0
+greenlet>=3.0.0
+alembic>=1.13.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0,<4.1.0
+
+# HTTP Client (NVIDIA chat + embeddings)
+httpx>=0.26.0
+
+# MCP
+mcp>=2.2.0,<2.3
+
+# Kill-chain lab PDF parsing
+pypdf>=5,<7
+
+# Configuration
+pyyaml>=6.0.1
+pydantic>=2.5.0
+eval-type-backport>=0.2.0
+
+# RAG storage only (vectors come from NVIDIA /v1/embeddings)
+chromadb>=0.4.22
+bm25s>=0.2.0
