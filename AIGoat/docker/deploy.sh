@@ -17,7 +17,11 @@ need_cmd() {
 }
 
 ensure_env() {
-  if [[ ! -f .env ]]; then
+  REPO_ROOT="$(cd "$ROOT/../.." && pwd)"
+  if [[ -f "$REPO_ROOT/.env" ]]; then
+    cp "$REPO_ROOT/.env" .env
+    echo "[INFO] Synced repo-root .env -> AIGoat/docker/.env"
+  elif [[ ! -f .env ]]; then
     if [[ ! -f .env.example ]]; then
       echo "[ERROR] .env.example not found in $ROOT" >&2
       exit 1
@@ -40,8 +44,9 @@ ensure_env() {
 }
 
 ensure_ollama_volume() {
+  # Named volume is created automatically by compose; keep helper for older installs.
   if ! docker volume ls --format '{{.Name}}' | grep -qx 'ollama_models'; then
-    echo "[INFO] Creating external Docker volume ollama_models..."
+    echo "[INFO] Creating Docker volume ollama_models..."
     docker volume create ollama_models >/dev/null
   fi
 }
@@ -82,8 +87,10 @@ cmd_up() {
 
 cmd_down() {
   need_cmd docker
+  # Never pass -v here: workshop DB + Ollama model volumes must survive restarts.
   docker compose down --remove-orphans
-  echo "[OK]   Stack stopped (ollama_models volume kept)"
+  echo "[OK]   Stack stopped (aigoat_db_data + ollama_models volumes kept)"
+  echo "[INFO] Public tunnel is separate — run ../../Enable-Access.ps1 -Ensure after 'up' if the share link is down."
 }
 
 cmd_status() {

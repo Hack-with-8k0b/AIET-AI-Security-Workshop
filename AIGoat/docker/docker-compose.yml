@@ -74,6 +74,10 @@ services:
     restart: unless-stopped
 
 volumes:
+  # Survive `docker compose down` (NOT `down -v`).
   db_data:
+    name: aigoat_db_data
+  # Pre-created / shared model cache (Enable-Access / deploy create if missing).
   ollama_models:
+    name: ollama_models
     external: true

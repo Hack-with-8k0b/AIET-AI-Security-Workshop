@@ -41,7 +41,12 @@ function Read-DotEnv([string]$Path) {
 }
 
 function Ensure-Env {
-    if (-not (Test-Path -Path '.env')) {
+    $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+    $rootEnv = Join-Path $repoRoot '.env'
+    if (Test-Path $rootEnv) {
+        Copy-Item $rootEnv (Join-Path $PSScriptRoot '.env') -Force
+        Write-Host "[INFO] Synced repo-root .env -> AIGoat\docker\.env"
+    } elseif (-not (Test-Path -Path '.env')) {
         if (-not (Test-Path -Path '.env.example')) {
             throw ".env.example not found in $PSScriptRoot"
         }
@@ -66,9 +71,10 @@ function Ensure-Env {
 }
 
 function Ensure-OllamaVolume {
+    # Named volume is created automatically by compose; keep helper for older installs.
     $names = docker volume ls --format '{{.Name}}'
     if ($names -notcontains 'ollama_models') {
-        Write-Host "[INFO] Creating external Docker volume ollama_models..."
+        Write-Host "[INFO] Creating Docker volume ollama_models..."
         docker volume create ollama_models | Out-Null
     }
 }
@@ -108,8 +114,10 @@ function Invoke-Up {
 
 function Invoke-Down {
     Assert-Docker
+    # Never pass -v here: workshop DB + Ollama model volumes must survive restarts.
     docker compose down --remove-orphans
-    Write-Host "[OK]   Stack stopped (ollama_models volume kept)"
+    Write-Host "[OK]   Stack stopped (aigoat_db_data + ollama_models volumes kept)"
+    Write-Host "[INFO] Public tunnel is separate — run ..\..\Enable-Access.ps1 -Ensure after 'up' if the share link is down."
 }
 
 function Invoke-Status {
