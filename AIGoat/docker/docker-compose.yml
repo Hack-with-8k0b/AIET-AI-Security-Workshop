@@ -1,31 +1,58 @@
-# AIET workshop: distroless backend + nginx frontend, NVIDIA hosted models.
-# From this directory: docker compose up --build -d
-# App: http://HOST:3000
+# AIET workshop stack — matches local AIGoat (Ollama + MiniLM embeddings).
+# From repo root:  .\deploy.ps1 up
+# Or from here:    docker compose up --build -d
+#
+# First run pulls the Ollama model (~4.5 GB for mistral). Allocate 12 GB+ RAM
+# in Docker Desktop. Create the model volume once:
+#   docker volume create ollama_models
 name: aigoat
 
 services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "${HOST_BIND:-0.0.0.0}:11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_HOST: "0.0.0.0:11434"
+      OLLAMA_NUM_PARALLEL: "1"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
   backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    expose:
-      - "8000"
+    ports:
+      - "${HOST_BIND:-0.0.0.0}:8000:8000"
     volumes:
-      - ./config.yml:/app/config/config.yml:ro
+      - ./config.yml:/app/config/config.yml
+      - ../prompts:/app/prompts
+      - ../media:/app/media
+      - ../guardrails:/app/guardrails
       - db_data:/app/data
     env_file:
       - .env
     environment:
       CONFIG_PATH: /app/config/config.yml
-      LLM_PROVIDER: ${LLM_PROVIDER:-nvidia}
-      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-nvidia}
-      NVIDIA_EMBED_MODEL: ${NVIDIA_EMBED_MODEL:-nvidia/nv-embedqa-e5-v5}
+      OLLAMA_BASE_URL: http://ollama:11434
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
       APP_DEBUG: "false"
+    depends_on:
+      ollama:
+        condition: service_healthy
     healthcheck:
       test:
         [
           "CMD",
-          "/usr/bin/python3.11",
+          "python",
           "-c",
           "import httpx; httpx.get('http://localhost:8000/api/products/', timeout=5).raise_for_status()",
         ]
@@ -48,3 +75,5 @@ services:
 
 volumes:
   db_data:
+  ollama_models:
+    external: true

@@ -5,6 +5,11 @@
 !.env.example
 .env.config.py
 
+# Remote access runtime (DuckDNS / cloudflared state generated on each machine)
+remote/state/*
+!remote/state/.gitkeep
+*.log
+
 # Local one-off deploy/debug helpers
 AIGoat/docker/_*.py
 

@@ -1,16 +1,19 @@
-# Safe workshop defaults. Secrets are injected through docker/.env and never stored here.
+# Safe workshop defaults. Optional secrets come from docker/.env (never commit .env).
 app:
   name: "AI Goat - AIET Workshop"
   debug: false
-  secret_key: "overridden-by-APP_SECRET_KEY"
-  allowed_origins: ["http://localhost:3000", "http://127.0.0.1:3000"]
+  secret_key: "aiet-workshop-local-secret"
+  # Loopback origins. RFC1918 / localhost / DuckDNS / Cloudflare quick tunnels
+  # are also covered by LOCAL_ORIGIN_REGEX in app/middleware/cors.py.
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
   media_dir: "./media"
 
 database:
   url: "sqlite+aiosqlite:////app/data/aigoat.db"
 
 ollama:
-  # Retained for local-development compatibility. Workshop Compose uses NVIDIA hosted inference.
   base_url: "http://ollama:11434"
   model: "mistral"
   agent_model: null
@@ -24,8 +27,7 @@ defense:
 
 rag:
   enabled: true
-  # Hosted NVIDIA embeddings when LLM_PROVIDER=nvidia (see NvidiaEmbeddingService).
-  embedding_model: "nvidia/nv-embedqa-e5-v5"
+  embedding_model: "all-MiniLM-L6-v2"
   chroma_path: "/app/data/chroma_db"
   top_k: 5
   chunk_size: 512

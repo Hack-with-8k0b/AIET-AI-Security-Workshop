@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Distroless-friendly backend entrypoint (no shell required)."""
+"""Optional Python entrypoint (Ollama path). Prefer docker-entrypoint.sh in Compose."""
 from __future__ import annotations
 
 import asyncio
@@ -27,14 +27,13 @@ def run(cmd: list[str]) -> None:
 
 
 def validate_env() -> None:
-    provider = os.environ.get("LLM_PROVIDER", "nvidia").strip().lower()
-    if provider not in {"nvidia", "openai-compatible", "openai_compatible"}:
-        fail(f"This workshop image expects LLM_PROVIDER=nvidia (got '{provider}').")
-    if not os.environ.get("NVIDIA_API_KEY", "").strip():
-        fail("NVIDIA_API_KEY is required.")
+    provider = os.environ.get("LLM_PROVIDER", "ollama").strip().lower()
+    if provider in {"nvidia", "openai-compatible", "openai_compatible"}:
+        if not os.environ.get("NVIDIA_API_KEY", "").strip():
+            fail("NVIDIA_API_KEY is required when LLM_PROVIDER=nvidia.")
     secret = os.environ.get("APP_SECRET_KEY", "").strip()
-    if not secret or secret == "aigoat-dev-secret-change-in-production":
-        fail("Set a unique APP_SECRET_KEY in docker/.env.")
+    if not secret:
+        os.environ["APP_SECRET_KEY"] = "aiet-workshop-local-secret"
 
 
 def db_state(db_file: str) -> str:
@@ -75,7 +74,8 @@ def main() -> None:
     print("", flush=True)
 
     validate_env()
-    info(f"NVIDIA model: {os.environ.get('NVIDIA_MODEL', 'nvidia/nemotron-3-ultra-550b-a55b')}")
+    provider = os.environ.get("LLM_PROVIDER", "ollama")
+    info(f"LLM_PROVIDER={provider}")
 
     info("Applying database migrations...")
     db_file = os.environ.get("DB_FILE", "/app/data/aigoat.db")

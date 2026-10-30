@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-# AIET workshop deploy helper (Linux / Kali / macOS).
+# AIET workshop deploy helper (Linux / Kali / macOS) — Ollama local stack.
 # Usage:
-#   ./deploy.sh up        # configure check + build/start
-#   ./deploy.sh down      # stop stack
-#   ./deploy.sh status    # compose ps + HTTP checks
-#   ./deploy.sh logs      # tail backend logs
-#   ./deploy.sh restart   # down + up
+#   ./deploy.sh up | down | status | logs | restart
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,8 +23,7 @@ ensure_env() {
       exit 1
     fi
     cp .env.example .env
-    echo "[INFO] Created .env from .env.example — edit NVIDIA_API_KEY and APP_SECRET_KEY, then re-run."
-    exit 2
+    echo "[INFO] Created .env from .env.example — set DUCKDNS_* if you need remote access."
   fi
 
   # shellcheck disable=SC1091
@@ -37,27 +32,30 @@ ensure_env() {
   source .env
   set +a
 
-  if [[ -z "${NVIDIA_API_KEY:-}" ]]; then
-    echo "[ERROR] Set NVIDIA_API_KEY in $ROOT/.env" >&2
-    exit 1
+  if [[ -z "${APP_SECRET_KEY:-}" ]]; then
+    echo "APP_SECRET_KEY=aiet-workshop-local-secret" >> .env
+    APP_SECRET_KEY=aiet-workshop-local-secret
+    echo "[INFO] Wrote default APP_SECRET_KEY into .env"
   fi
-  if [[ -z "${APP_SECRET_KEY:-}" || "${APP_SECRET_KEY}" == "aigoat-dev-secret-change-in-production" ]]; then
-    echo "[ERROR] Set a unique APP_SECRET_KEY in $ROOT/.env" >&2
-    echo "        python3 -c \"import secrets; print(secrets.token_urlsafe(48))\"" >&2
-    exit 1
+}
+
+ensure_ollama_volume() {
+  if ! docker volume ls --format '{{.Name}}' | grep -qx 'ollama_models'; then
+    echo "[INFO] Creating external Docker volume ollama_models..."
+    docker volume create ollama_models >/dev/null
   fi
 }
 
 wait_http() {
   local url="$1"
-  local tries="${2:-40}"
+  local tries="${2:-60}"
   local i
   for ((i = 1; i <= tries; i++)); do
     if curl -fsS -o /dev/null "$url"; then
       echo "[OK]   $url"
       return 0
     fi
-    sleep 3
+    sleep 5
   done
   echo "[WARN] Timed out waiting for $url" >&2
   return 1
@@ -67,8 +65,10 @@ cmd_up() {
   need_cmd docker
   docker compose version >/dev/null
   ensure_env
+  ensure_ollama_volume
 
-  echo "[INFO] Building and starting AI Goat (NVIDIA hosted models, distroless backend)..."
+  echo "[INFO] Building and starting AI Goat (Ollama + local embeddings)..."
+  echo "[INFO] First run may take a long time (image build + mistral model pull)."
   docker compose up --build -d
 
   echo "[INFO] Waiting for UI..."
@@ -83,7 +83,7 @@ cmd_up() {
 cmd_down() {
   need_cmd docker
   docker compose down --remove-orphans
-  echo "[OK]   Stack stopped"
+  echo "[OK]   Stack stopped (ollama_models volume kept)"
 }
 
 cmd_status() {
