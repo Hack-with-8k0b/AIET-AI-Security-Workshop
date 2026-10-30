@@ -252,22 +252,59 @@ function Get-TunnelUrl([string]$StateDir) {
     return $url.Trim()
 }
 
+function Update-ShareRedirect([string]$TunnelUrl) {
+    if (-not $TunnelUrl) { return }
+    $docsDir = Join-Path $repoRoot 'docs'
+    New-Item -ItemType Directory -Force -Path $docsDir | Out-Null
+    $sharePage = Join-Path $docsDir 'index.html'
+    $safe = $TunnelUrl.Replace('&', '&amp;').Replace('"', '&quot;')
+    $html = @"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AIET AI Security Workshop</title>
+  <meta http-equiv="refresh" content="0; url=$safe" />
+  <link rel="canonical" href="$safe" />
+  <style>
+    body { font-family: Georgia, serif; margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: linear-gradient(160deg, #f3efe6, #d9e5df 55%, #c5d4e8); color: #1d2430; }
+    main { width: min(34rem, calc(100% - 2rem)); padding: 2rem 1.5rem; }
+    a.button { display: inline-block; padding: 0.7rem 1.1rem; background: #1d2430; color: #f7f3ea;
+      text-decoration: none; border-radius: 0.35rem; }
+    code { word-break: break-all; }
+  </style>
+  <script>location.replace("$TunnelUrl");</script>
+</head>
+<body>
+  <main>
+    <h1>AIET AI Security Workshop</h1>
+    <p>Redirecting to the live lab…</p>
+    <p><a class="button" href="$safe">Open workshop</a></p>
+    <p>If nothing happens, open:<br /><code>$safe</code></p>
+  </main>
+</body>
+</html>
+"@
+    Set-Content -Path $sharePage -Value $html -Encoding utf8
+    Set-Content -Path (Join-Path $stateDir 'share-url.txt') -Value 'https://hack-with-8k0b.github.io/AIET-AI-Security-Workshop/' -Encoding utf8
+    Write-Ok "Updated short share page: docs\index.html (push to GitHub to publish)"
+}
+
 function Write-AccessBanner([string]$TunnelUrl, [string]$DomainName, [int]$Port) {
+    if ($TunnelUrl) { Update-ShareRedirect -TunnelUrl $TunnelUrl }
+    $shareUrl = 'https://hack-with-8k0b.github.io/AIET-AI-Security-Workshop/'
     Write-Host ""
     Write-Host "============================================================"
-    Write-Host "  ACCESS THE WORKSHOP HERE (Cloudflare Tunnel)"
+    Write-Host "  SHARE THIS SHORT LINK"
     Write-Host "============================================================"
-    if ($TunnelUrl) {
-        Write-Host ""
-        Write-Host "  $TunnelUrl"
-        Write-Host ""
-        Write-Host "  Open this link in a browser to use the site."
-    } else {
-        Write-Host ""
-        Write-Host "  (no tunnel URL yet - run: .\Enable-Access.ps1 -RestartTunnel)"
-        Write-Host ""
-    }
+    Write-Host ""
+    Write-Host "  $shareUrl"
+    Write-Host ""
+    Write-Host "  (redirects to the live Cloudflare tunnel)"
     Write-Host "============================================================"
+    Write-Host "  Tunnel     : $(if ($TunnelUrl) { $TunnelUrl } else { '(none yet - run -RestartTunnel)' })"
     Write-Host "  Local only : http://127.0.0.1:$Port"
     if ($DomainName) {
         Write-Host "  DuckDNS    : http://$DomainName.duckdns.org:$Port  (needs port-forward)"
