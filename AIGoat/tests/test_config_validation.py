@@ -43,9 +43,9 @@ class TestOllamaConfig:
         cfg = OllamaConfig(base_url="https://ollama.example.com")
         assert cfg.base_url == "https://ollama.example.com"
 
-    def test_timeout_default_is_ninety(self):
+    def test_timeout_default_allows_cpu_agent_turns(self):
         cfg = OllamaConfig(base_url="http://localhost:11434")
-        assert cfg.timeout == 90
+        assert cfg.timeout == 300
 
 
 class TestChatConfig:

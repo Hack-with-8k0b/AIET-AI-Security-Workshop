@@ -17,7 +17,8 @@ ollama:
   base_url: "http://ollama:11434"
   model: "mistral"
   agent_model: null
-  timeout: 120
+  # CPU-only Mistral can need 3–5+ minutes per agent turn; 120s caused aborts.
+  timeout: 300
 
 defense:
   level: 0

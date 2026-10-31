@@ -1,0 +1,15 @@
+# Optional NVIDIA GPU overlay for the ollama service.
+# Merge only when a GPU is available (or AIGOAT_GPU=gpu):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# On machines without NVIDIA / Docker GPU passthrough, omit this file —
+# the base compose runs Ollama on CPU.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

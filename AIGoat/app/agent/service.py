@@ -460,7 +460,9 @@ async def start_run(
         session_token=session_token,
     )
     db.add(run)
-    await db.flush()
+    # Commit before the LLM loop so SQLite does not hold a write lock for
+    # minutes while Ollama generates (CPU runs often exceed 2 minutes).
+    await db.commit()
     if level >= 1:
         gated = await defense_pipeline.process_input(goal, level, user.id, surface=SURFACE)
         if not gated.allowed:

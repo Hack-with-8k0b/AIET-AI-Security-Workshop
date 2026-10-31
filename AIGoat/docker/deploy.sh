@@ -2,12 +2,19 @@
 # AIET workshop deploy helper (Linux / Kali / macOS) — Ollama local stack.
 # Usage:
 #   ./deploy.sh up | down | status | logs | restart
+#
+# GPU switch (env AIGOAT_GPU, also readable from .env):
+#   auto — NVIDIA if nvidia-smi works, else CPU (default)
+#   gpu  — always merge docker-compose.gpu.yml
+#   cpu  — never request a GPU (works on any machine)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 ACTION="${1:-up}"
+COMPOSE_BASE=(-f docker-compose.yml)
+COMPOSE_GPU_FILE="docker-compose.gpu.yml"
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -44,10 +51,53 @@ ensure_env() {
 }
 
 ensure_ollama_volume() {
-  # Named volume is created automatically by compose; keep helper for older installs.
   if ! docker volume ls --format '{{.Name}}' | grep -qx 'ollama_models'; then
     echo "[INFO] Creating Docker volume ollama_models..."
     docker volume create ollama_models >/dev/null
+  fi
+}
+
+# Returns 0 when we should merge docker-compose.gpu.yml.
+want_gpu() {
+  local mode
+  mode="$(echo "${AIGOAT_GPU:-auto}" | tr '[:upper:]' '[:lower:]')"
+  case "$mode" in
+    0 | false | no | off | cpu)
+      return 1
+      ;;
+    1 | true | yes | on | gpu)
+      return 0
+      ;;
+    auto | *)
+      if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+        return 0
+      fi
+      return 1
+      ;;
+  esac
+}
+
+compose_args() {
+  local args=("${COMPOSE_BASE[@]}")
+  if [[ "${1:-}" == "gpu" ]]; then
+    args+=(-f "$COMPOSE_GPU_FILE")
+  fi
+  printf '%s\n' "${args[@]}"
+}
+
+compose_up() {
+  local mode="$1"
+  shift
+  # shellcheck disable=SC2046
+  docker compose $(compose_args "$mode") up --build -d "$@"
+}
+
+compose_down() {
+  # Include GPU overlay if present so project teardown is consistent either way.
+  if [[ -f "$COMPOSE_GPU_FILE" ]]; then
+    docker compose -f docker-compose.yml -f "$COMPOSE_GPU_FILE" down --remove-orphans
+  else
+    docker compose -f docker-compose.yml down --remove-orphans
   fi
 }
 
@@ -74,23 +124,36 @@ cmd_up() {
 
   echo "[INFO] Building and starting AI Goat (Ollama + local embeddings)..."
   echo "[INFO] First run may take a long time (image build + mistral model pull)."
-  docker compose up --build -d
+
+  if want_gpu; then
+    echo "[INFO] AIGOAT_GPU=${AIGOAT_GPU:-auto} — attempting NVIDIA GPU for Ollama"
+    if ! compose_up gpu; then
+      echo "[WARN] GPU compose failed; falling back to CPU (no NVIDIA reservation)"
+      compose_up cpu
+    else
+      echo "[OK]   Started with GPU overlay ($COMPOSE_GPU_FILE)"
+    fi
+  else
+    echo "[INFO] AIGOAT_GPU=${AIGOAT_GPU:-auto} — starting Ollama on CPU (works without NVIDIA)"
+    compose_up cpu
+  fi
 
   echo "[INFO] Waiting for UI..."
   wait_http "http://127.0.0.1:3000/" || true
   wait_http "http://127.0.0.1:3000/api/products/" || true
-  docker compose ps
+  # shellcheck disable=SC2046
+  docker compose $(compose_args "$(want_gpu && echo gpu || echo cpu)") ps || docker compose ps
   echo ""
   echo "App:  http://127.0.0.1:3000"
   echo "Bind: ${HOST_BIND:-0.0.0.0}:3000"
+  echo "GPU:  AIGOAT_GPU=${AIGOAT_GPU:-auto} (set cpu|gpu|auto in .env to force)"
 }
 
 cmd_down() {
   need_cmd docker
   # Never pass -v here: workshop DB + Ollama model volumes must survive restarts.
-  docker compose down --remove-orphans
-  echo "[OK]   Stack stopped (aigoat_db_data + ollama_models volumes kept)"
-  echo "[INFO] Public tunnel is separate — run ../../Enable-Access.ps1 -Ensure after 'up' if the share link is down."
+  compose_down
+  echo "[OK]   Stack stopped (ollama_models volume kept)"
 }
 
 cmd_status() {
@@ -119,6 +182,7 @@ case "$ACTION" in
   restart) cmd_restart ;;
   *)
     echo "Usage: $0 {up|down|status|logs|restart}" >&2
+    echo "GPU:   AIGOAT_GPU=auto|gpu|cpu (default auto)" >&2
     exit 1
     ;;
 esac

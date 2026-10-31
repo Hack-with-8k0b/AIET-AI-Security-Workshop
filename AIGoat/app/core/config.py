@@ -34,7 +34,7 @@ class OllamaConfig(BaseModel):
     base_url: str = "http://localhost:11434"
     model: str = "mistral"
     agent_model: str | None = None
-    timeout: int = 90
+    timeout: int = 300
 
     @field_validator("base_url")
     @classmethod

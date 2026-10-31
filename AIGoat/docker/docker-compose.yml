@@ -1,6 +1,10 @@
 # AIET workshop stack — matches local AIGoat (Ollama + MiniLM embeddings).
-# From repo root:  .\deploy.ps1 up
+# From repo root:  .\Enable-Access.ps1
 # Or from here:    docker compose up --build -d
+#
+# Default is CPU-safe (no NVIDIA reservation). For GPU acceleration:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# Or set AIGOAT_GPU=auto|gpu|cpu and use deploy.sh / Enable-Access.ps1.
 #
 # First run pulls the Ollama model (~4.5 GB for mistral). Allocate 12 GB+ RAM
 # in Docker Desktop. Create the model volume once:
@@ -74,10 +78,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  # Survive `docker compose down` (NOT `down -v`).
   db_data:
-    name: aigoat_db_data
-  # Pre-created / shared model cache (Enable-Access / deploy create if missing).
   ollama_models:
-    name: ollama_models
     external: true
